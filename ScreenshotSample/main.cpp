@@ -86,8 +86,6 @@ std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
             unionRect.bottom = displayRect.bottom;
         }
     }
-    auto unionWidth = unionRect.right - unionRect.left;
-    auto unionHeight = unionRect.bottom - unionRect.top;
 
     // Capture each display
     std::vector<std::future<Snapshot>> futures;
@@ -119,14 +117,20 @@ std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     {
         auto snapshot = co_await future;
 
+        D3D11_TEXTURE2D_DESC desc = {};
+        snapshot.Texture->GetDesc(&desc);
+
+        auto destX = snapshot.DisplayRect.left - unionRect.left;
+        auto destY = snapshot.DisplayRect.top - unionRect.top;
+
         D3D11_BOX region = {};
-        region.left = snapshot.DisplayRect.left - unionRect.left;
-        region.right = region.left + unionWidth;
-        region.top = snapshot.DisplayRect.top - unionRect.top;
-        region.bottom = region.top + unionHeight;
+        region.left = 0;
+        region.right = desc.Width;
+        region.top = 0;
+        region.bottom = desc.Height;
         region.back = 1;
 
-        d3dContext->CopySubresourceRegion(composedTexture.get(), 0, 0, 0, 0, snapshot.Texture.get(), 0, &region);
+        d3dContext->CopySubresourceRegion(composedTexture.get(), 0, destX, destY, 0, snapshot.Texture.get(), 0, &region);
     }
 
     co_return composedTexture;
