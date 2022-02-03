@@ -2,6 +2,12 @@
 #include "Display.h"
 #include "Snapshot.h"
 
+#ifdef _DEBUG
+#define D3D_DEVICE_CREATE_FLAGS (D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG)
+#else
+#define D3D_DEVICE_CREATE_FLAGS D3D11_CREATE_DEVICE_BGRA_SUPPORT
+#endif
+
 namespace winrt
 {
     using namespace Windows::Foundation;
@@ -34,7 +40,7 @@ int wmain()
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     // Init D3D
-    auto d3dDevice = util::CreateD3DDevice(D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG);
+    auto d3dDevice = util::CreateD3DDevice(D3D_DEVICE_CREATE_FLAGS);
     auto device = CreateDirect3DDevice(d3dDevice.as<IDXGIDevice>().get());
 
     // Enumerate displays
