@@ -32,6 +32,8 @@
 #include <filesystem>
 #include <chrono>
 #include <vector>
+#include <future>
+#include <string>
 
 // robmikh.common
 #include <robmikh.common/direct3d11.interop.h>
