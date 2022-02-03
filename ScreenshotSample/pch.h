@@ -34,6 +34,7 @@
 #include <vector>
 #include <future>
 #include <string>
+#include <map>
 
 // robmikh.common
 #include <robmikh.common/direct3d11.interop.h>

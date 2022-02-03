@@ -3,10 +3,13 @@
 struct Display
 {
     static std::vector<Display> GetAllDisplays();
-    Display(HMONITOR handle);
+    Display(HMONITOR handle, RECT rect, bool isHDR, float sdrWhiteLevelInNits);
 
     HMONITOR Handle() const { return m_handle; }
     RECT const& Rect() const { return m_rect; }
+    bool IsHDR() const { return m_isHDR; }
+    // Only valid if IsHDR is true
+    float SDRWhiteLevelInNits() const { return m_sdrWhiteLevelInNits; }
 
     bool operator==(const Display& display) { return m_handle == display.m_handle; }
     bool operator!=(const Display& display) { return !(*this == display); }
@@ -14,4 +17,6 @@ struct Display
 private:
     HMONITOR m_handle = nullptr;
     RECT m_rect = {};
+    bool m_isHDR = false;
+    float m_sdrWhiteLevelInNits = 0.0f;
 };
