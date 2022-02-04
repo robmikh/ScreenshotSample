@@ -2,12 +2,7 @@
 #include "Display.h"
 #include "Snapshot.h"
 #include "ToneMapper.h"
-
-#ifdef _DEBUG
-#define D3D_DEVICE_CREATE_FLAGS (D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG)
-#else
-#define D3D_DEVICE_CREATE_FLAGS D3D11_CREATE_DEVICE_BGRA_SUPPORT
-#endif
+#include "Options.h"
 
 namespace winrt
 {
@@ -16,11 +11,13 @@ namespace winrt
     using namespace Windows::Graphics::Imaging;
     using namespace Windows::Storage;
     using namespace Windows::Storage::Streams;
+    using namespace Windows::System;
 }
 
 namespace util
 {
     using namespace robmikh::common::uwp;
+    using namespace robmikh::common::wcli;
 }
 
 float CLEARCOLOR[] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
@@ -34,15 +31,15 @@ winrt::IAsyncAction SaveTextureToFileAsync(
     winrt::com_ptr<ID3D11Texture2D> const& texture,
     winrt::StorageFile const& file);
 
-int wmain()
+winrt::IAsyncAction MainAsync()
 {
-    // Init COM
-    winrt::init_apartment();
-    // We don't want virtualized coordinates
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
     // Init D3D
-    auto d3dDevice = util::CreateD3DDevice(D3D_DEVICE_CREATE_FLAGS);
+    uint32_t d3dFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    if (Options::DxDebug())
+    {
+        d3dFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    }
+    auto d3dDevice = util::CreateD3DDevice(d3dFlags);
     auto device = CreateDirect3DDevice(d3dDevice.as<IDXGIDevice>().get());
 
     auto toneMapper = std::make_shared<ToneMapper>(d3dDevice);
@@ -65,10 +62,57 @@ int wmain()
     auto composedTexture = ComposeSnapshotsAsync(device, displays, toneMapper).get();
 
     // Save the texture to a file
-    auto file = CreateLocalFileAsync(L"screenshot.png").get();
-    SaveTextureToFileAsync(composedTexture, file).get();
-
+    auto file = co_await CreateLocalFileAsync(L"screenshot.png");
+    co_await SaveTextureToFileAsync(composedTexture, file);
     wprintf(L"Done!\n");
+    co_await winrt::Launcher::LaunchFileAsync(file);
+
+    co_return;
+}
+
+int wmain(int argc, wchar_t* argv[])
+{
+    // Init COM
+    winrt::init_apartment();
+    // We don't want virtualized coordinates
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    // Parse args
+    std::vector<std::wstring> args(argv + 1, argv + argc);
+    if (util::impl::GetFlag(args, L"-help") || util::impl::GetFlag(args, L"/?"))
+    {
+        wprintf(L"ScreenshotSample.exe\n");
+        wprintf(L"A sample that shows how to take and save screenshots using Windows.Graphics.Capture.\n");
+        wprintf(L"\n");
+        wprintf(L"Flags:\n");
+        wprintf(L"  -dxDebug     (optional) Use the D3D and D2D debug layers.\n");
+        wprintf(L"  -forceHDR    (optional) Force all monitors to be captured as HDR, used for debugging.\n");
+        wprintf(L"\n");
+        return 0;
+    }
+    bool dxDebug = util::impl::GetFlag(args, L"-dxDebug") || util::impl::GetFlag(args, L"/dxDebug");
+    bool forceHDR = util::impl::GetFlag(args, L"-forceHDR") || util::impl::GetFlag(args, L"/forceHDR");
+    Options::InitOptions(dxDebug, forceHDR);
+    if (dxDebug)
+    {
+        wprintf(L"Using D3D and D2D debug layers...\n");
+    }
+    if (forceHDR)
+    {
+        wprintf(L"Forcing HDR capture for all monitors...\n");
+    }
+
+    // Run the sample synchronously
+    try
+    {
+        MainAsync().get();
+    }
+    catch (winrt::hresult_error const& error)
+    {
+        wprintf(L"Error:\n");
+        wprintf(L"  0x%08x - %s\n", error.code().value, error.message().c_str());
+    }
+
     return 0;
 }
 

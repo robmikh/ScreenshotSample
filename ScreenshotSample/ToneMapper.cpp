@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ToneMapper.h"
+#include "Options.h"
 
 namespace util
 {
@@ -8,26 +9,18 @@ namespace util
 
 static const float sc_DefaultSdrDispMaxNits = 203.0f; // Based on BT.2100 recommended SDR viewing conditions.
 
-// DEBUG, REMOVE AND UPDATE robmikh.common
-inline auto CreateD2DFactory()
-{
-    D2D1_FACTORY_OPTIONS options{};
-
-    #ifdef _DEBUG
-    	options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-    #endif
-
-    winrt::com_ptr<ID2D1Factory1> factory;
-    winrt::check_hresult(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, options, factory.put()));
-    return factory;
-}
-
 ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
 {
+    auto d2dDebugFlag = D2D1_DEBUG_LEVEL_NONE;
+    if (Options::DxDebug())
+    {
+        d2dDebugFlag = D2D1_DEBUG_LEVEL_INFORMATION;
+    }
+
     m_d3dDevice = d3dDevice;
     m_d3dDevice->GetImmediateContext(m_d3dContext.put());
     m_d3dMultithread = m_d3dDevice.as<ID3D11Multithread>();
-    m_d2dFactory = /*util::*/CreateD2DFactory();
+    m_d2dFactory = util::CreateD2DFactory(d2dDebugFlag);
     auto d2dDevice = util::CreateD2DDevice(m_d2dFactory, d3dDevice);
     m_d2dDevice = d2dDevice.as<ID2D1Device1>();
     winrt::com_ptr<ID2D1DeviceContext1> d2dContext;

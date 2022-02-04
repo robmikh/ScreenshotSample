@@ -10,11 +10,13 @@
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Snapshot.cpp" />
     <ClCompile Include="ToneMapper.cpp" />
+    <ClCompile Include="Options.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Snapshot.h" />
     <ClInclude Include="ToneMapper.h" />
+    <ClInclude Include="Options.h" />
   </ItemGroup>
 </Project>

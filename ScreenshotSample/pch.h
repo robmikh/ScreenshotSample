@@ -17,6 +17,7 @@
 #include <winrt/Windows.Graphics.Imaging.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.System.h>
 
 // WIL
 #include <wil/resource.h>
@@ -42,3 +43,4 @@
 #include <robmikh.common/graphics.interop.h>
 #include <robmikh.common/d3dHelpers.desktop.h>
 #include <robmikh.common/capture.desktop.interop.h>
+#include <robmikh.common/wcliparse.h>

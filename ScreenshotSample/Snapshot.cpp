@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Snapshot.h"
+#include "Options.h"
 
 namespace winrt
 {
@@ -29,12 +30,11 @@ std::future<Snapshot> Snapshot::TakeAsync(
     auto isHDR = display.IsHDR();
     auto sdrWhiteLevel = display.SDRWhiteLevelInNits();
 
-    // DEBUG, PLEASE REMOVE
-    if (!isHDR)
+    if (!isHDR && Options::ForceHDR())
     {
+        isHDR = true;
         sdrWhiteLevel = D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL;
     }
-    isHDR = true;
 
     auto hdrToneMapper = toneMapper;
 
