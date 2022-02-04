@@ -6,7 +6,7 @@ public:
     ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice);
     ~ToneMapper() {}
 
-    winrt::com_ptr<ID3D11Texture2D> ProcessTexture(winrt::com_ptr<ID3D11Texture2D> const& hdrTexture);
+    winrt::com_ptr<ID3D11Texture2D> ProcessTexture(winrt::com_ptr<ID3D11Texture2D> const& hdrTexture, float sdrWhiteLevelInNits);
 
 private:
     winrt::com_ptr<ID3D11Device> m_d3dDevice;

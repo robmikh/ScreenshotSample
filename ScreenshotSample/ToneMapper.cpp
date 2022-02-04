@@ -34,7 +34,7 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
     winrt::check_hresult(m_d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, d2dContext.put()));
     m_d2dContext = d2dContext.as<ID2D1DeviceContext5>();
 
-    winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorMatrix, m_sdrWhiteScaleEffect.put()));
+    winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1WhiteLevelAdjustment, m_sdrWhiteScaleEffect.put()));
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1HdrToneMap, m_hdrTonemapEffect.put()));
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorManagement, m_colorManagementEffect.put()));
 
@@ -42,14 +42,7 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
     m_hdrTonemapEffect->SetInputEffect(0, m_colorManagementEffect.get());
 
     // Setup the while scale effect
-    float scale = D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL / sc_DefaultSdrDispMaxNits;
-    D2D1_MATRIX_5X4_F matrix = D2D1::Matrix5x4F(
-        scale, 0, 0, 0,  // [R] Multiply each color channel
-        0, scale, 0, 0,  // [G] by the scale factor in 
-        0, 0, scale, 0,  // [B] linear gamma space.
-        0, 0, 0, 1,      // [A] Preserve alpha values.
-        0, 0, 0, 0);     //     No offset.
-    winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, matrix));
+    winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_OUTPUT_WHITE_LEVEL, D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL));
 
     // Setup the tone map effect
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_OUTPUT_MAX_LUMINANCE, sc_DefaultSdrDispMaxNits));
@@ -67,7 +60,7 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
     winrt::check_hresult(m_colorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT, outputColorContext.get()));
 }
 
-winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11Texture2D> const& hdrTexture)
+winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11Texture2D> const& hdrTexture, float sdrWhiteLevelInNits)
 {
     auto multithreadLock = util::D3D11DeviceLock(m_d3dMultithread.get());
 
@@ -88,7 +81,11 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
         D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_NONE,
         d2dImageSource.put()));
 
+    winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_INPUT_WHITE_LEVEL, sdrWhiteLevelInNits));
     m_colorManagementEffect->SetInput(0, d2dImageSource.get());
+
+    winrt::com_ptr<ID2D1Image> effectImage;
+    m_sdrWhiteScaleEffect->GetOutput(effectImage.put());
 
     // Create our output texture
     winrt::com_ptr<ID3D11Texture2D> outputTexture;
@@ -110,9 +107,9 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     // Draw to the render target
     m_d2dContext->BeginDraw();
     m_d2dContext->Clear(D2D1::ColorF(0, 0));
-    m_d2dContext->DrawImage(m_sdrWhiteScaleEffect.get(), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
+    m_d2dContext->DrawImage(effectImage.get(), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
     winrt::check_hresult(m_d2dContext->EndDraw());
-    winrt::check_hresult(m_d2dContext->Flush());
+    //winrt::check_hresult(m_d2dContext->Flush());
 
     m_d2dContext->SetTarget(nullptr);
 
