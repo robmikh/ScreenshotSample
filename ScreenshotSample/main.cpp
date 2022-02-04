@@ -49,6 +49,17 @@ int wmain()
 
     // Enumerate displays
     auto displays = Display::GetAllDisplays();
+    for (auto&& display : displays)
+    {
+        if (display.IsHDR())
+        {
+            wprintf(L"Found HDR display with white level: %f\n", display.SDRWhiteLevelInNits());
+        }
+        else
+        {
+            wprintf(L"Found SDR display\n");
+        }
+    }
 
     // Compose our displays
     auto composedTexture = ComposeSnapshotsAsync(device, displays, toneMapper).get();

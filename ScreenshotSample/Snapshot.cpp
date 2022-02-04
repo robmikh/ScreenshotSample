@@ -32,7 +32,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
     // DEBUG, PLEASE REMOVE
     if (!isHDR)
     {
-        sdrWhiteLevel = 3.0;
+        sdrWhiteLevel = D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL;
     }
     isHDR = true;
 
