@@ -1,6 +1,42 @@
 #include "pch.h"
 #include "Display.h"
 
+std::map<HMONITOR, float> BuildDisplayHandleToMaxLuminanceMap()
+{
+    std::map<HMONITOR, float> maxLuminances;
+
+    winrt::com_ptr<IDXGIFactory1> factory;
+    winrt::check_hresult(CreateDXGIFactory1(winrt::guid_of<IDXGIFactory1>(), factory.put_void()));
+
+    UINT adapterCount = 0;
+    winrt::com_ptr<IDXGIAdapter1> adapter;
+    while (SUCCEEDED(factory->EnumAdapters1(adapterCount, adapter.put())))
+    {
+        UINT outputCount = 0;
+        winrt::com_ptr<IDXGIOutput> output;
+        while (SUCCEEDED(adapter->EnumOutputs(outputCount, output.put())))
+        {
+            auto output6 = output.as<IDXGIOutput6>();
+            DXGI_OUTPUT_DESC1 desc = {};
+            winrt::check_hresult(output6->GetDesc1(&desc));
+            if (desc.AttachedToDesktop)
+            {
+                auto displayHandle = desc.Monitor;
+                auto maxLuminance = desc.MaxLuminance;
+                maxLuminances.insert({ displayHandle, maxLuminance });
+            }
+
+            output = nullptr;
+            outputCount++;
+        }
+
+        adapter = nullptr;
+        adapterCount++;
+    }
+
+    return maxLuminances;
+}
+
 std::vector<DISPLAYCONFIG_PATH_INFO> GetDisplayConfigPathInfos()
 {
     uint32_t numPaths = 0;
@@ -29,22 +65,9 @@ struct DisplayHDRInfo
     float SDRWhiteLevelInNits = 0.0f;
 };
 
-std::vector<Display> Display::GetAllDisplays()
+std::map<std::wstring, DisplayHDRInfo> BuildDeviceNameToHDRInfoMap()
 {
-    // Get all the display handles
-    std::vector<HMONITOR> displayHandles;
-    EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR hmon, HDC, LPRECT, LPARAM lparam)
-    {
-        auto& displayHandles = *reinterpret_cast<std::vector<HMONITOR>*>(lparam);
-        displayHandles.push_back(hmon);
-
-        return TRUE;
-    }, reinterpret_cast<LPARAM>(&displayHandles));
-
-    // Get all the display config path infos
     auto pathInfos = GetDisplayConfigPathInfos();
-
-    // Build a mapping of device names to HDR information
     std::map<std::wstring, DisplayHDRInfo> namesToHDRInfos;
     for (auto&& pathInfo : pathInfos)
     {
@@ -79,6 +102,27 @@ std::vector<Display> Display::GetAllDisplays()
         namesToHDRInfos.insert({ name, { isHDR, sdrWhiteLevelInNits } });
     }
 
+    return namesToHDRInfos;
+}
+
+std::vector<Display> Display::GetAllDisplays()
+{
+    // Get all the display handles
+    std::vector<HMONITOR> displayHandles;
+    EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR hmon, HDC, LPRECT, LPARAM lparam)
+    {
+        auto& displayHandles = *reinterpret_cast<std::vector<HMONITOR>*>(lparam);
+        displayHandles.push_back(hmon);
+
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&displayHandles));
+
+    // We need the max luminance of the display, which we get from DXGI
+    auto maxLuminances = BuildDisplayHandleToMaxLuminanceMap();
+
+    // Build a mapping of device names to HDR information
+    auto namesToHDRInfos = BuildDeviceNameToHDRInfoMap();
+    
     // Go through each display and find the matching hdr info
     std::vector<Display> displays;
     for (auto&& displayHandle : displayHandles)
@@ -89,16 +133,18 @@ std::vector<Display> Display::GetAllDisplays()
         std::wstring name(monitorInfo.szDevice);
 
         auto hdrInfo = namesToHDRInfos[name];
-        displays.push_back(Display(displayHandle, monitorInfo.rcMonitor, hdrInfo.IsHDR, hdrInfo.SDRWhiteLevelInNits));
+        auto maxLuminance = maxLuminances[displayHandle];
+        displays.push_back(Display(displayHandle, monitorInfo.rcMonitor, hdrInfo.IsHDR, hdrInfo.SDRWhiteLevelInNits, maxLuminance));
     }
 
     return displays;
 }
 
-Display::Display(HMONITOR handle, RECT rect, bool isHDR, float sdrWhiteLevelInNits)
+Display::Display(HMONITOR handle, RECT rect, bool isHDR, float sdrWhiteLevelInNits, float maxLuminance)
 {
     m_handle = handle;
     m_rect = rect;
     m_isHDR = isHDR;
     m_sdrWhiteLevelInNits = sdrWhiteLevelInNits;
+    m_maxLuminance = maxLuminance;
 }

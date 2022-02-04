@@ -29,6 +29,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
     auto displayRect = display.Rect();
     auto isHDR = display.IsHDR();
     auto sdrWhiteLevel = display.SDRWhiteLevelInNits();
+    auto maxLuminance = display.MaxLuminance();
 
     if (!isHDR && Options::ForceHDR())
     {
@@ -76,7 +77,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
     if (isHDR)
     {
         // Tonemap the texture
-        resultTexture.copy_from(hdrToneMapper->ProcessTexture(captureTexture, sdrWhiteLevel).get());
+        resultTexture.copy_from(hdrToneMapper->ProcessTexture(captureTexture, sdrWhiteLevel, maxLuminance).get());
     }
     else
     {

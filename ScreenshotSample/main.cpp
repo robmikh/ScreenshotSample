@@ -51,7 +51,7 @@ winrt::IAsyncAction MainAsync()
     {
         if (display.IsHDR())
         {
-            wprintf(L"Found HDR display with white level: %f\n", display.SDRWhiteLevelInNits());
+            wprintf(L"Found HDR display with white level: %f  and max luminance: %f\n", display.SDRWhiteLevelInNits(), display.MaxLuminance());
         }
         else
         {
