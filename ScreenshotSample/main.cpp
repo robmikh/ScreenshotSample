@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Display.h"
 #include "Snapshot.h"
+#include "ToneMapper.h"
 
 #ifdef _DEBUG
 #define D3D_DEVICE_CREATE_FLAGS (D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG)
@@ -26,7 +27,8 @@ float CLEARCOLOR[] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
 std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     winrt::IDirect3DDevice const& device,
-    std::vector<Display> const& displays);
+    std::vector<Display> const& displays,
+    std::shared_ptr<ToneMapper> const& toneMapper);
 winrt::IAsyncOperation<winrt::StorageFile> CreateLocalFileAsync(std::wstring const& fileName);
 winrt::IAsyncAction SaveTextureToFileAsync(
     winrt::com_ptr<ID3D11Texture2D> const& texture,
@@ -43,11 +45,13 @@ int wmain()
     auto d3dDevice = util::CreateD3DDevice(D3D_DEVICE_CREATE_FLAGS);
     auto device = CreateDirect3DDevice(d3dDevice.as<IDXGIDevice>().get());
 
+    auto toneMapper = std::make_shared<ToneMapper>(d3dDevice);
+
     // Enumerate displays
     auto displays = Display::GetAllDisplays();
 
     // Compose our displays
-    auto composedTexture = ComposeSnapshotsAsync(device, displays).get();
+    auto composedTexture = ComposeSnapshotsAsync(device, displays, toneMapper).get();
 
     // Save the texture to a file
     auto file = CreateLocalFileAsync(L"screenshot.png").get();
@@ -59,7 +63,8 @@ int wmain()
 
 std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     winrt::IDirect3DDevice const& device,
-    std::vector<Display> const& displays)
+    std::vector<Display> const& displays,
+    std::shared_ptr<ToneMapper> const& toneMapper)
 {
     auto d3dDevice = GetDXGIInterfaceFromObject<ID3D11Device>(device);
     winrt::com_ptr<ID3D11DeviceContext> d3dContext;
@@ -97,7 +102,7 @@ std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     std::vector<std::future<Snapshot>> futures;
     for (auto&& display : displays)
     {
-        auto future = Snapshot::TakeAsync(device, display);
+        auto future = Snapshot::TakeAsync(device, display, toneMapper);
         futures.push_back(std::move(future));
     }
 

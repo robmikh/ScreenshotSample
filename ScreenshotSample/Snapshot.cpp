@@ -17,7 +17,8 @@ namespace util
 
 std::future<Snapshot> Snapshot::TakeAsync(
     winrt::IDirect3DDevice const& device, 
-    Display const& display)
+    Display const& display,
+    std::shared_ptr<ToneMapper> const& toneMapper)
 {
     auto d3dDevice = GetDXGIInterfaceFromObject<ID3D11Device>(device);
     winrt::com_ptr<ID3D11DeviceContext> d3dContext;
@@ -25,12 +26,21 @@ std::future<Snapshot> Snapshot::TakeAsync(
 
     auto displayHandle = display.Handle();
     auto displayRect = display.Rect();
+    auto isHDR = display.IsHDR();
+    auto sdrWhiteLevel = display.SDRWhiteLevelInNits();
+
+    // DEBUG, PLEASE REMOVE
+    isHDR = true;
+
+    auto hdrToneMapper = toneMapper;
+
+    auto capturePixelFormat = display.IsHDR() ? winrt::DirectXPixelFormat::R16G16B16A16Float : winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+
 
     auto item = util::CreateCaptureItemForMonitor(displayHandle);
-    // TODO: Capture in FP16 if HDR
     auto framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(
         device,
-        winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized,
+        capturePixelFormat,
         1,
         item.Size());
     auto session = framePool.CreateCaptureSession(item);
@@ -53,7 +63,17 @@ std::future<Snapshot> Snapshot::TakeAsync(
 
     co_await winrt::resume_on_signal(captureEvent.get());
 
-    // TODO: Tonemap if HDR
+    winrt::com_ptr<ID3D11Texture2D> resultTexture;
+    if (isHDR)
+    {
+        // Tonemap the texture
+        resultTexture.copy_from(hdrToneMapper->ProcessTexture(captureTexture).get());
+    }
+    else
+    {
+        // If we captured an SDR display, we can directly use the capture
+        resultTexture.copy_from(captureTexture.get());
+    }
 
-    co_return Snapshot{ captureTexture, displayRect };
+    co_return Snapshot{ resultTexture, displayRect };
 }
