@@ -7,8 +7,6 @@ namespace util
     using namespace robmikh::common::uwp;
 }
 
-static const float sc_DefaultSdrDispMaxNits = 203.0f; // Based on BT.2100 recommended SDR viewing conditions.
-
 ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
 {
     auto d2dDebugFlag = D2D1_DEBUG_LEVEL_NONE;
@@ -36,10 +34,7 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
     m_sdrWhiteScaleEffect->SetInputEffect(0, m_hdrTonemapEffect.get());
     m_outputColorManagementEffect->SetInputEffect(0, m_sdrWhiteScaleEffect.get());
 
-
     // Setup the tone map effect
-    //winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_OUTPUT_MAX_LUMINANCE, sc_DefaultSdrDispMaxNits));
-    winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_OUTPUT_MAX_LUMINANCE, D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL));
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_DISPLAY_MODE, D2D1_HDRTONEMAP_DISPLAY_MODE_SDR));
 
     // Setup the input color management effect
@@ -47,7 +42,6 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
         winrt::check_hresult(m_inputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_QUALITY, D2D1_COLORMANAGEMENT_QUALITY_BEST));
 
         winrt::com_ptr<ID2D1ColorContext1> inputColorContext;
-        //winrt::check_hresult(m_d2dContext->CreateColorContextFromDxgiColorSpace(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020, inputColorContext.put()));
         winrt::check_hresult(m_d2dContext->CreateColorContextFromDxgiColorSpace(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709, inputColorContext.put()));
         winrt::check_hresult(m_inputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT, inputColorContext.get()));
 
@@ -64,8 +58,6 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
         winrt::check_hresult(m_d2dContext->CreateColorContext(D2D1_COLOR_SPACE_SCRGB, nullptr, 0, inputColorContext.put()));
         winrt::check_hresult(m_outputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT, inputColorContext.get()));
 
-        //winrt::com_ptr<ID2D1ColorContext> outputColorContext;
-        //winrt::check_hresult(m_d2dContext->CreateColorContext(D2D1_COLOR_SPACE_SRGB, nullptr, 0, outputColorContext.put()));
         winrt::com_ptr<ID2D1ColorContext1> outputColorContext;
         winrt::check_hresult(m_d2dContext->CreateColorContextFromDxgiColorSpace(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709, outputColorContext.put()));
         winrt::check_hresult(m_outputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT, outputColorContext.get()));
@@ -86,14 +78,14 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     winrt::check_hresult(m_d2dContext->CreateImageSourceFromDxgi(
         surfaces.data(),
         static_cast<uint32_t>(surfaces.size()),
-        // D2D doesn't support DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020
-        // for image sources. We account for this in the color management
-        // effect.
+        // We'll properly adjust the color space using the
+        // color management effects.
         DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709,
         D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_NONE,
         d2dImageSource.put()));
 
     // Finish setting up the HDR tone map effect
+    winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_OUTPUT_MAX_LUMINANCE, sdrWhiteLevelInNits));
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_INPUT_MAX_LUMINANCE, maxLuminance));
 
     // Setup the while scale effect
