@@ -88,7 +88,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     std::vector<IDXGISurface*> surfaces = { dxgiSurface.get() };
     winrt::check_hresult(m_d2dContext->CreateImageSourceFromDxgi(
         surfaces.data(),
-        surfaces.size(),
+        static_cast<uint32_t>(surfaces.size()),
         // D2D doesn't support DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020
         // for image sources. We account for this in the color management
         // effect.

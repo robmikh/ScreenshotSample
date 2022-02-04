@@ -36,10 +36,15 @@ std::future<Snapshot> Snapshot::TakeAsync(
         sdrWhiteLevel = D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL;
     }
 
+    if (Options::ClipHDR())
+    {
+        isHDR = false;
+        sdrWhiteLevel = 0.0f;
+    }
+
     auto hdrToneMapper = toneMapper;
 
     auto capturePixelFormat = display.IsHDR() ? winrt::DirectXPixelFormat::R16G16B16A16Float : winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
-
 
     auto item = util::CreateCaptureItemForMonitor(displayHandle);
     auto framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(

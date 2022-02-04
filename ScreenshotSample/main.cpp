@@ -30,6 +30,7 @@ winrt::IAsyncOperation<winrt::StorageFile> CreateLocalFileAsync(std::wstring con
 winrt::IAsyncAction SaveTextureToFileAsync(
     winrt::com_ptr<ID3D11Texture2D> const& texture,
     winrt::StorageFile const& file);
+bool ParseOptions(int argc, wchar_t* argv[]);
 
 winrt::IAsyncAction MainAsync()
 {
@@ -78,28 +79,9 @@ int wmain(int argc, wchar_t* argv[])
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     // Parse args
-    std::vector<std::wstring> args(argv + 1, argv + argc);
-    if (util::impl::GetFlag(args, L"-help") || util::impl::GetFlag(args, L"/?"))
+    if (!ParseOptions(argc, argv))
     {
-        wprintf(L"ScreenshotSample.exe\n");
-        wprintf(L"A sample that shows how to take and save screenshots using Windows.Graphics.Capture.\n");
-        wprintf(L"\n");
-        wprintf(L"Flags:\n");
-        wprintf(L"  -dxDebug     (optional) Use the D3D and D2D debug layers.\n");
-        wprintf(L"  -forceHDR    (optional) Force all monitors to be captured as HDR, used for debugging.\n");
-        wprintf(L"\n");
         return 0;
-    }
-    bool dxDebug = util::impl::GetFlag(args, L"-dxDebug") || util::impl::GetFlag(args, L"/dxDebug");
-    bool forceHDR = util::impl::GetFlag(args, L"-forceHDR") || util::impl::GetFlag(args, L"/forceHDR");
-    Options::InitOptions(dxDebug, forceHDR);
-    if (dxDebug)
-    {
-        wprintf(L"Using D3D and D2D debug layers...\n");
-    }
-    if (forceHDR)
-    {
-        wprintf(L"Forcing HDR capture for all monitors...\n");
     }
 
     // Run the sample synchronously
@@ -231,4 +213,43 @@ winrt::IAsyncAction SaveTextureToFileAsync(
     co_await encoder.FlushAsync();
 
     co_return;
+}
+
+bool ParseOptions(int argc, wchar_t* argv[])
+{
+    std::vector<std::wstring> args(argv + 1, argv + argc);
+    if (util::impl::GetFlag(args, L"-help") || util::impl::GetFlag(args, L"/?"))
+    {
+        wprintf(L"ScreenshotSample.exe\n");
+        wprintf(L"A sample that shows how to take and save screenshots using Windows.Graphics.Capture.\n");
+        wprintf(L"\n");
+        wprintf(L"Flags:\n");
+        wprintf(L"  -dxDebug     (optional) Use the D3D and D2D debug layers.\n");
+        wprintf(L"  -forceHDR    (optional) Force all monitors to be captured as HDR, used for debugging.\n");
+        wprintf(L"  -clipHDR     (optional) Clip HDR contnet instead of tone mapping.\n");
+        wprintf(L"\n");
+        return false;
+    }
+    bool dxDebug = util::impl::GetFlag(args, L"-dxDebug") || util::impl::GetFlag(args, L"/dxDebug");
+    bool forceHDR = util::impl::GetFlag(args, L"-forceHDR") || util::impl::GetFlag(args, L"/forceHDR");
+    bool clipHDR = util::impl::GetFlag(args, L"-clipHDR") || util::impl::GetFlag(args, L"/clipHDR");
+    if (clipHDR && forceHDR)
+    {
+        wprintf(L"Cannot simultaneously clip and force HDR!\n");
+        return false;
+    }
+    Options::InitOptions(dxDebug, forceHDR, clipHDR);
+    if (dxDebug)
+    {
+        wprintf(L"Using D3D and D2D debug layers...\n");
+    }
+    if (forceHDR)
+    {
+        wprintf(L"Forcing HDR capture for all monitors...\n");
+    }
+    if (clipHDR)
+    {
+        wprintf(L"Clipping HDR content...\n");
+    }
+    return true;
 }
