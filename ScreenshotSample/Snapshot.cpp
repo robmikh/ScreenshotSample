@@ -44,7 +44,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
 
     auto hdrToneMapper = toneMapper;
 
-    auto capturePixelFormat = display.IsHDR() ? winrt::DirectXPixelFormat::R16G16B16A16Float : winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+    auto capturePixelFormat = isHDR ? winrt::DirectXPixelFormat::R16G16B16A16Float : winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
 
     auto item = util::CreateCaptureItemForMonitor(displayHandle);
     auto framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(
