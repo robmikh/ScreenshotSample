@@ -91,8 +91,6 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     // Setup the while scale effect
     // Here we're reserving 10% of our range for highlights. The more we reserve
     // for highlights, the dimmer "paper white" will be.
-    //winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_INPUT_WHITE_LEVEL, sdrWhiteLevelInNits));
-    //winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_OUTPUT_WHITE_LEVEL, D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL * 0.90f));
     winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_OUTPUT_WHITE_LEVEL, sdrWhiteLevelInNits));
     winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_INPUT_WHITE_LEVEL, D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL * 0.90f));
 
@@ -124,7 +122,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     m_d2dContext->Clear(D2D1::ColorF(0, 0));
     m_d2dContext->DrawImage(effectImage.get(), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
     winrt::check_hresult(m_d2dContext->EndDraw());
-    //winrt::check_hresult(m_d2dContext->Flush());
+    winrt::check_hresult(m_d2dContext->Flush());
 
     m_d2dContext->SetTarget(nullptr);
 
