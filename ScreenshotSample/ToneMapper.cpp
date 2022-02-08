@@ -27,40 +27,25 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
 
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1WhiteLevelAdjustment, m_sdrWhiteScaleEffect.put()));
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1HdrToneMap, m_hdrTonemapEffect.put()));
-    winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorManagement, m_inputColorManagementEffect.put()));
-    winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorManagement, m_outputColorManagementEffect.put()));
+    winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorManagement, m_colorManagementEffect.put()));
 
-    m_hdrTonemapEffect->SetInputEffect(0, m_inputColorManagementEffect.get());
     m_sdrWhiteScaleEffect->SetInputEffect(0, m_hdrTonemapEffect.get());
-    m_outputColorManagementEffect->SetInputEffect(0, m_sdrWhiteScaleEffect.get());
+    m_colorManagementEffect->SetInputEffect(0, m_sdrWhiteScaleEffect.get());
 
     // Setup the tone map effect
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_DISPLAY_MODE, D2D1_HDRTONEMAP_DISPLAY_MODE_SDR));
 
-    // Setup the input color management effect
-    {
-        winrt::check_hresult(m_inputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_QUALITY, D2D1_COLORMANAGEMENT_QUALITY_BEST));
-
-        winrt::com_ptr<ID2D1ColorContext1> inputColorContext;
-        winrt::check_hresult(m_d2dContext->CreateColorContextFromDxgiColorSpace(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709, inputColorContext.put()));
-        winrt::check_hresult(m_inputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT, inputColorContext.get()));
-
-        winrt::com_ptr<ID2D1ColorContext> outputColorContext;
-        winrt::check_hresult(m_d2dContext->CreateColorContext(D2D1_COLOR_SPACE_SCRGB, nullptr, 0, outputColorContext.put()));
-        winrt::check_hresult(m_inputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT, outputColorContext.get()));
-    }
-
     // Setup the output color management effect
     {
-        winrt::check_hresult(m_outputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_QUALITY, D2D1_COLORMANAGEMENT_QUALITY_BEST));
+        winrt::check_hresult(m_colorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_QUALITY, D2D1_COLORMANAGEMENT_QUALITY_BEST));
 
         winrt::com_ptr<ID2D1ColorContext> inputColorContext;
         winrt::check_hresult(m_d2dContext->CreateColorContext(D2D1_COLOR_SPACE_SCRGB, nullptr, 0, inputColorContext.put()));
-        winrt::check_hresult(m_outputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT, inputColorContext.get()));
+        winrt::check_hresult(m_colorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT, inputColorContext.get()));
 
         winrt::com_ptr<ID2D1ColorContext1> outputColorContext;
         winrt::check_hresult(m_d2dContext->CreateColorContextFromDxgiColorSpace(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709, outputColorContext.put()));
-        winrt::check_hresult(m_outputColorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT, outputColorContext.get()));
+        winrt::check_hresult(m_colorManagementEffect->SetValue(D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT, outputColorContext.get()));
     }
 }
 
@@ -95,10 +80,10 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_INPUT_WHITE_LEVEL, D2D1_SCENE_REFERRED_SDR_WHITE_LEVEL * 0.90f));
 
     // Hookup our HDR texture to our effect graph
-    m_inputColorManagementEffect->SetInput(0, d2dImageSource.get());
+    m_hdrTonemapEffect->SetInput(0, d2dImageSource.get());
 
     winrt::com_ptr<ID2D1Image> effectImage;
-    m_outputColorManagementEffect->GetOutput(effectImage.put());
+    m_colorManagementEffect->GetOutput(effectImage.put());
 
     // Create our output texture
     winrt::com_ptr<ID3D11Texture2D> outputTexture;
@@ -122,7 +107,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     m_d2dContext->Clear(D2D1::ColorF(0, 0));
     m_d2dContext->DrawImage(effectImage.get(), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
     winrt::check_hresult(m_d2dContext->EndDraw());
-    winrt::check_hresult(m_d2dContext->Flush());
+    //winrt::check_hresult(m_d2dContext->Flush());
 
     m_d2dContext->SetTarget(nullptr);
 

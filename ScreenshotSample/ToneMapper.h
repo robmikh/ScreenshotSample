@@ -18,6 +18,5 @@ private:
 
     winrt::com_ptr<ID2D1Effect> m_sdrWhiteScaleEffect;
     winrt::com_ptr<ID2D1Effect> m_hdrTonemapEffect;
-    winrt::com_ptr<ID2D1Effect> m_inputColorManagementEffect;
-    winrt::com_ptr<ID2D1Effect> m_outputColorManagementEffect;
+    winrt::com_ptr<ID2D1Effect> m_colorManagementEffect;
 };
