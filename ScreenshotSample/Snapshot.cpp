@@ -25,12 +25,14 @@ std::future<Snapshot> Snapshot::TakeAsync(
     winrt::com_ptr<ID3D11DeviceContext> d3dContext;
     d3dDevice->GetImmediateContext(d3dContext.put());
 
+    // Get the information we need from the display
     auto displayHandle = display.Handle();
     auto displayRect = display.Rect();
     auto isHDR = display.IsHDR();
     auto sdrWhiteLevel = display.SDRWhiteLevelInNits();
     auto maxLuminance = display.MaxLuminance();
 
+    // Debug options
     if (!isHDR && Options::ForceHDR())
     {
         isHDR = true;
@@ -43,10 +45,16 @@ std::future<Snapshot> Snapshot::TakeAsync(
         sdrWhiteLevel = 0.0f;
     }
 
+    // Grab a reference to the tone mapper so that it
+    // survives the comming coroutines.
     auto hdrToneMapper = toneMapper;
 
+    // HDR captures use an FP16 pixel format, SDR uses BGRA8
     auto capturePixelFormat = isHDR ? winrt::DirectXPixelFormat::R16G16B16A16Float : winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
 
+    // Setup our capture objects. If you want, this is where you 
+    // should adjust any properties of the GraphicsCaptureSession
+    // (e.g. IsCursorCaptureEnabled, IsBorderRequired).
     auto item = util::CreateCaptureItemForMonitor(displayHandle);
     auto framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(
         device,
@@ -55,6 +63,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
         item.Size());
     auto session = framePool.CreateCaptureSession(item);
 
+    // Get one frame and then end the capture.
     winrt::com_ptr<ID3D11Texture2D> captureTexture;
     wil::shared_event captureEvent(wil::EventOptions::ManualReset);
     framePool.FrameArrived([session, d3dDevice, d3dContext, captureEvent, &captureTexture](auto&& framePool, auto&&) -> void
@@ -71,8 +80,11 @@ std::future<Snapshot> Snapshot::TakeAsync(
         });
     session.StartCapture();
 
+    // Wait for the next frame to show up.
     co_await winrt::resume_on_signal(captureEvent.get());
 
+    // The caller is expecting a BGRA8 texture. If we captured in HDR,
+    // tone map the texture and give the result back.
     winrt::com_ptr<ID3D11Texture2D> resultTexture;
     if (isHDR)
     {

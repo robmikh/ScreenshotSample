@@ -71,6 +71,7 @@ std::map<std::wstring, DisplayHDRInfo> BuildDeviceNameToHDRInfoMap()
     std::map<std::wstring, DisplayHDRInfo> namesToHDRInfos;
     for (auto&& pathInfo : pathInfos)
     {
+        // Get the device name.
         DISPLAYCONFIG_SOURCE_DEVICE_NAME deviceName = {};
         deviceName.header.size = sizeof(deviceName);
         deviceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
@@ -79,6 +80,7 @@ std::map<std::wstring, DisplayHDRInfo> BuildDeviceNameToHDRInfoMap()
         winrt::check_win32(DisplayConfigGetDeviceInfo(&deviceName.header));
         std::wstring name(deviceName.viewGdiDeviceName);
 
+        // Check to see if the display is in HDR mode.
         DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO colorInfo = {};
         colorInfo.header.size = sizeof(colorInfo);
         colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
@@ -87,6 +89,7 @@ std::map<std::wstring, DisplayHDRInfo> BuildDeviceNameToHDRInfoMap()
         winrt::check_win32(DisplayConfigGetDeviceInfo(&colorInfo.header));
         bool isHDR = colorInfo.advancedColorEnabled && !colorInfo.wideColorEnforced;
 
+        // Get the SDR white level.
         float sdrWhiteLevelInNits = 0.0f;
         if (isHDR)
         {
@@ -127,11 +130,14 @@ std::vector<Display> Display::GetAllDisplays()
     std::vector<Display> displays;
     for (auto&& displayHandle : displayHandles)
     {
+        // Get the monitor rect and device name.
         MONITORINFOEXW monitorInfo = {};
         monitorInfo.cbSize = sizeof(monitorInfo);
         winrt::check_bool(GetMonitorInfoW(displayHandle, &monitorInfo));
         std::wstring name(monitorInfo.szDevice);
 
+        // This sample assumes that we'll find the displays we're looking for.
+        // You may want to assume a display isn't HDR if you can't find its information.
         auto hdrInfo = namesToHDRInfos[name];
         auto maxLuminance = maxLuminances[displayHandle];
         displays.push_back(Display(displayHandle, monitorInfo.rcMonitor, hdrInfo.IsHDR, hdrInfo.SDRWhiteLevelInNits, maxLuminance));

@@ -25,10 +25,12 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
     winrt::check_hresult(m_d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, d2dContext.put()));
     m_d2dContext = d2dContext.as<ID2D1DeviceContext5>();
 
+    // Create our effects
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1WhiteLevelAdjustment, m_sdrWhiteScaleEffect.put()));
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1HdrToneMap, m_hdrTonemapEffect.put()));
     winrt::check_hresult(m_d2dContext->CreateEffect(CLSID_D2D1ColorManagement, m_colorManagementEffect.put()));
 
+    // Setup our effect graph connections
     m_sdrWhiteScaleEffect->SetInputEffect(0, m_hdrTonemapEffect.get());
     m_colorManagementEffect->SetInputEffect(0, m_sdrWhiteScaleEffect.get());
 
@@ -64,7 +66,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
         surfaces.data(),
         static_cast<uint32_t>(surfaces.size()),
         // We'll properly adjust the color space using the
-        // color management effects.
+        // color management effect.
         DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709,
         D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_NONE,
         d2dImageSource.put()));
@@ -73,7 +75,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_OUTPUT_MAX_LUMINANCE, sdrWhiteLevelInNits));
     winrt::check_hresult(m_hdrTonemapEffect->SetValue(D2D1_HDRTONEMAP_PROP_INPUT_MAX_LUMINANCE, maxLuminance));
 
-    // Setup the while scale effect
+    // Setup the white scale effect
     // Here we're reserving 10% of our range for highlights. The more we reserve
     // for highlights, the dimmer "paper white" will be.
     winrt::check_hresult(m_sdrWhiteScaleEffect->SetValue(D2D1_WHITELEVELADJUSTMENT_PROP_OUTPUT_WHITE_LEVEL, sdrWhiteLevelInNits));
@@ -82,6 +84,7 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     // Hookup our HDR texture to our effect graph
     m_hdrTonemapEffect->SetInput(0, d2dImageSource.get());
 
+    // Get the image from our last effect that we'll use to draw.
     winrt::com_ptr<ID2D1Image> effectImage;
     m_colorManagementEffect->GetOutput(effectImage.put());
 
@@ -107,7 +110,6 @@ winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11
     m_d2dContext->Clear(D2D1::ColorF(0, 0));
     m_d2dContext->DrawImage(effectImage.get(), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
     winrt::check_hresult(m_d2dContext->EndDraw());
-    //winrt::check_hresult(m_d2dContext->Flush());
 
     m_d2dContext->SetTarget(nullptr);
 
