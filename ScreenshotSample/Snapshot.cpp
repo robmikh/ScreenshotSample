@@ -55,6 +55,7 @@ std::future<Snapshot> Snapshot::TakeAsync(
     // Setup our capture objects. If you want, this is where you 
     // should adjust any properties of the GraphicsCaptureSession
     // (e.g. IsCursorCaptureEnabled, IsBorderRequired).
+    // The CreateCaptureItemForMonitor helper can be found here: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/capture.desktop.interop.h#L16-L23
     auto item = util::CreateCaptureItemForMonitor(displayHandle);
     auto framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(
         device,

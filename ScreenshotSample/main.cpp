@@ -40,9 +40,13 @@ winrt::IAsyncAction MainAsync()
     {
         d3dFlags |= D3D11_CREATE_DEVICE_DEBUG;
     }
+    // These helpers can be found in the robmikh.common package:
+    // CreateD3DDevice: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/d3dHelpers.h#L68-L79
+    // CreateDirect3DDevice: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/direct3d11.interop.h#L19-L24
     auto d3dDevice = util::CreateD3DDevice(d3dFlags);
     auto device = CreateDirect3DDevice(d3dDevice.as<IDXGIDevice>().get());
 
+    // Create our tone mapper
     auto toneMapper = std::make_shared<ToneMapper>(d3dDevice);
 
     // Enumerate displays
@@ -198,6 +202,8 @@ winrt::IAsyncAction SaveTextureToFileAsync(
 {
     D3D11_TEXTURE2D_DESC desc = {};
     texture->GetDesc(&desc);
+    // These helpers can be found in the robmikh.common package:
+    // CopyBytesFromTexture: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/d3dHelpers.h#L250-L282
     auto bytes = util::CopyBytesFromTexture(texture);
 
     auto stream = co_await file.OpenAsync(winrt::FileAccessMode::ReadWrite);
@@ -217,6 +223,9 @@ winrt::IAsyncAction SaveTextureToFileAsync(
 
 bool ParseOptions(int argc, wchar_t* argv[])
 {
+    // Much of this method uses helpers from the robmikh.common package.
+    // I wouldn't recommend using this part, but if you're curious it can 
+    // be found here: https://github.com/robmikh/robmikh.common/blob/master/robmikh.common/include/robmikh.common/wcliparse.h
     std::vector<std::wstring> args(argv + 1, argv + argc);
     if (util::impl::GetFlag(args, L"-help") || util::impl::GetFlag(args, L"/?"))
     {

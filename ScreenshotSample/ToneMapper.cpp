@@ -15,6 +15,9 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
         d2dDebugFlag = D2D1_DEBUG_LEVEL_INFORMATION;
     }
 
+    // These helpers can be found in the robmikh.common package:
+    // CreateD2DFactory: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/d3dHelpers.h#L81-L89
+    // CreateD2DDevice: https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/d3dHelpers.h#L53-L58
     m_d3dDevice = d3dDevice;
     m_d3dDevice->GetImmediateContext(m_d3dContext.put());
     m_d3dMultithread = m_d3dDevice.as<ID3D11Multithread>();
@@ -53,6 +56,8 @@ ToneMapper::ToneMapper(winrt::com_ptr<ID3D11Device> const& d3dDevice)
 
 winrt::com_ptr<ID3D11Texture2D> ToneMapper::ProcessTexture(winrt::com_ptr<ID3D11Texture2D> const& hdrTexture, float sdrWhiteLevelInNits, float maxLuminance)
 {
+    // The D3D11DeviceLock RAII wrapper can be found here:
+    // https://github.com/robmikh/robmikh.common/blob/f2311df8de56f31410d14f55de7307464d9a673d/robmikh.common/include/robmikh.common/d3dHelpers.h#L30-L46
     auto multithreadLock = util::D3D11DeviceLock(m_d3dMultithread.get());
 
     D3D11_TEXTURE2D_DESC desc = {};
