@@ -64,7 +64,7 @@ winrt::IAsyncAction MainAsync()
     }
 
     // Compose our displays
-    auto composedTexture = ComposeSnapshotsAsync(device, displays, toneMapper).get();
+    auto composedTexture = co_await ComposeSnapshotsAsync(device, displays, toneMapper);
 
     // Save the texture to a file
     auto file = co_await CreateLocalFileAsync(L"screenshot.png");
