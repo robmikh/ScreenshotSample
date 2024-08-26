@@ -16,7 +16,7 @@ namespace util
     using namespace robmikh::common::uwp;
 }
 
-std::future<Snapshot> Snapshot::TakeAsync(
+wil::task<Snapshot> Snapshot::TakeAsync(
     winrt::IDirect3DDevice const& device, 
     Display const& display,
     std::shared_ptr<ToneMapper> const& toneMapper)

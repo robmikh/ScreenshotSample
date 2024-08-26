@@ -4,7 +4,7 @@
 
 struct Snapshot
 {
-    static std::future<Snapshot> TakeAsync(
+    static wil::task<Snapshot> TakeAsync(
         winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice const& device,
         Display const& display,
         std::shared_ptr<ToneMapper> const& toneMapper);

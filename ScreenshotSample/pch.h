@@ -21,6 +21,7 @@
 
 // WIL
 #include <wil/resource.h>
+#include <wil/coroutine.h>
 
 // DirectX
 #include <d3d11_4.h>

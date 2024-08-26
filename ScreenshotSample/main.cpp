@@ -22,7 +22,7 @@ namespace util
 
 float CLEARCOLOR[] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
-std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
+wil::task<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     winrt::IDirect3DDevice const& device,
     std::vector<Display> const& displays,
     std::shared_ptr<ToneMapper> const& toneMapper);
@@ -102,7 +102,7 @@ int wmain(int argc, wchar_t* argv[])
     return 0;
 }
 
-std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
+wil::task<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     winrt::IDirect3DDevice const& device,
     std::vector<Display> const& displays,
     std::shared_ptr<ToneMapper> const& toneMapper)
@@ -140,7 +140,7 @@ std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     }
 
     // Capture each display
-    std::vector<std::future<Snapshot>> futures;
+    std::vector<wil::task<Snapshot>> futures;
     for (auto&& display : displays)
     {
         auto future = Snapshot::TakeAsync(device, display, toneMapper);
@@ -167,7 +167,7 @@ std::future<winrt::com_ptr<ID3D11Texture2D>> ComposeSnapshotsAsync(
     // Compose our textures into one texture
     for (auto&& future : futures)
     {
-        auto snapshot = co_await future;
+        auto snapshot = co_await std::move(future);
 
         D3D11_TEXTURE2D_DESC desc = {};
         snapshot.Texture->GetDesc(&desc);
